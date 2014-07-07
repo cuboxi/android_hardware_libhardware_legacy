@@ -119,7 +119,7 @@ static int insmod(const char *filename, const char *args)
     void *module;
     unsigned int size;
     int ret;
-
+    return 0; /* bcm80211 driver in LK 3.0.35 loads at at boot time */
     module = load_file(filename, &size);
     if (!module)
         return -1;
@@ -135,7 +135,7 @@ static int rmmod(const char *modname)
 {
     int ret = -1;
     int maxtry = 10;
-
+    /* bcm80211 driver in LK 3.0.35 will never unload */
     while (maxtry-- > 0) {
         ret = delete_module(modname, O_NONBLOCK | O_EXCL);
         if (ret < 0 && errno == EAGAIN)
