@@ -643,14 +643,25 @@ int wifi_connect_to_supplicant()
     return wifi_connect_on_socket_path(path);
 }
 
+#define NAMECHECK "IFNAME=wlan0 "
 int wifi_send_command(const char *cmd, char *reply, size_t *reply_len)
 {
-    int ret;
+    int ret, len;
+    char *cmd_mod;
     if (ctrl_conn == NULL) {
         ALOGV("Not connected to wpa_supplicant - \"%s\" command dropped.\n", cmd);
         return -1;
     }
-    ret = wpa_ctrl_request(ctrl_conn, cmd, strlen(cmd), reply, reply_len, NULL);
+    len = strlen(cmd);
+    cmd_mod = (char *)cmd;
+    /* Android 4.4.2 sends IFNAME=wlan0 prefix. So remove it */
+    if (!strncmp(cmd,NAMECHECK, strlen(NAMECHECK))) {
+		cmd_mod = (char *)&cmd[strlen(NAMECHECK)];
+                len -= strlen(NAMECHECK);
+        ALOGD("old command '%s', new command '%s'\n", cmd,cmd_mod);
+
+    }
+    ret = wpa_ctrl_request(ctrl_conn, cmd_mod, len, reply, reply_len, NULL);
     if (ret == -2) {
         ALOGD("'%s' command timed out.\n", cmd);
         /* unblocks the monitor receive socket for termination */
@@ -658,6 +669,9 @@ int wifi_send_command(const char *cmd, char *reply, size_t *reply_len)
         return -2;
     } else if (ret < 0 || strncmp(reply, "FAIL", 4) == 0) {
         return -1;
+    }
+    if (strncmp(cmd_mod, "PING", 4) == 0) {
+        reply[*reply_len] = '\0';
     }
     if (strncmp(cmd, "PING", 4) == 0) {
         reply[*reply_len] = '\0';
@@ -755,8 +769,16 @@ int wifi_wait_on_socket(char *buf, size_t buflen)
         /* let the event go as is! */
         ALOGW("supplicant generated event without interface and without message level - %s\n", buf);
     }
-
-    return nread;
+    /*
+     * Android 4.4.2 uses a single pipe for communication, so add
+     * IFNAME=wlan0 as a prefix
+     */
+    if (nread < buflen+strlen(NAMECHECK)) {
+        memmove (buf+strlen(NAMECHECK),buf, nread);
+	buf[nread+strlen(NAMECHECK)] = 0;
+        memcpy (buf, NAMECHECK, strlen(NAMECHECK));
+    }
+    return nread+strlen(NAMECHECK);
 }
 
 int wifi_wait_for_event(char *buf, size_t buflen)
