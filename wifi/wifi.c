@@ -136,6 +136,7 @@ static int rmmod(const char *modname)
     int ret = -1;
     int maxtry = 10;
     /* bcm80211 driver in LK 3.0.35 will never unload */
+    return 0;
     while (maxtry-- > 0) {
         ret = delete_module(modname, O_NONBLOCK | O_EXCL);
         if (ret < 0 && errno == EAGAIN)
