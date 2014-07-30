@@ -659,7 +659,6 @@ int wifi_send_command(const char *cmd, char *reply, size_t *reply_len)
     if (!strncmp(cmd,NAMECHECK, strlen(NAMECHECK))) {
 		cmd_mod = (char *)&cmd[strlen(NAMECHECK)];
                 len -= strlen(NAMECHECK);
-        ALOGD("old command '%s', new command '%s'\n", cmd,cmd_mod);
 
     }
     ret = wpa_ctrl_request(ctrl_conn, cmd_mod, len, reply, reply_len, NULL);
